@@ -617,8 +617,8 @@
     </div>
 
     <script>
-        // 🔥 IMPORTANT: Your Backend URL from Render
-        const BACKEND_URL = "https://cyber-ai-backend.onrender.com";
+        // 🔥 YOUR BACKEND URL
+        const BACKEND_URL = "https://cyber-ai-1-i2ko.onrender.com";
         
         // State
         let chatHistory = [];
@@ -684,6 +684,7 @@
                 const response = await fetch(`${BACKEND_URL}/health`);
                 
                 if (response.ok) {
+                    const data = await response.json();
                     isConnected = true;
                     statusDot.style.background = '#10b981';
                     statusText.textContent = 'Connected';
@@ -693,11 +694,12 @@
                         addMessage("Hello! I'm Cyber AI, powered by advanced AI technology. I'm here to help you with cybersecurity, programming, AI topics, and much more. How can I assist you today?", 'ai');
                     }, 500);
                     
+                    console.log('✅ Backend connected:', data.status);
                 } else {
                     throw new Error('Connection failed');
                 }
             } catch (error) {
-                console.log('Backend not reachable, using enhanced mode');
+                console.log('⚠️ Backend not reachable, using enhanced mode');
                 isConnected = true; // Still allow chat
                 statusDot.style.background = '#f59e0b';
                 statusText.textContent = 'Enhanced Mode';
@@ -758,12 +760,14 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        messages: messages
+                        messages: messages,
+                        timestamp: new Date().toISOString()
                     })
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Backend error: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Backend error: ${response.status} - ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -781,9 +785,19 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
                     aiResponse = data.choices[0].message.content;
                 } else if (data.content) {
                     aiResponse = data.content;
+                } else if (data.candidates && data.candidates[0]?.content?.parts) {
+                    // Direct Gemini response format
+                    aiResponse = data.candidates[0].content.parts[0].text;
                 } else {
+                    console.log('Response data:', data);
                     throw new Error('Invalid response format');
                 }
+                
+                // Clean response
+                aiResponse = aiResponse
+                    .replace(/gemini/gi, 'Cyber AI')
+                    .replace(/google/gi, '')
+                    .replace(/powered by.*/gi, '');
                 
                 // Add AI response
                 addMessage(aiResponse, 'ai');
@@ -798,6 +812,8 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
                 if (chatHistory.length > 20) {
                     chatHistory = chatHistory.slice(-20);
                 }
+                
+                console.log('✅ Message sent successfully');
                 
             } catch (error) {
                 // Hide typing indicator
@@ -821,8 +837,10 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
                 
                 // Reset status after 3 seconds
                 setTimeout(() => {
-                    statusDot.style.background = '#10b981';
-                    statusText.textContent = 'Connected';
+                    if (isConnected) {
+                        statusDot.style.background = '#10b981';
+                        statusText.textContent = 'Connected';
+                    }
                 }, 3000);
             }
         }
@@ -831,22 +849,26 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
             const msg = userMessage.toLowerCase();
             
             if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
-                return "Hello! I'm Cyber AI. How can I help you with cybersecurity or programming today? (Enhanced Mode)";
+                return "Hello! I'm Cyber AI. How can I help you with cybersecurity or programming today?";
             }
             
             if (msg.includes('python') || msg.includes('code') || msg.includes('program')) {
-                return `🐍 **Python Programming Help:**\n\n\`\`\`python\n# Example: Secure password checker\nimport re\n\ndef check_password(password):\n    if len(password) < 12:\n        return "Too short"\n    if not re.search(r'[A-Z]', password):\n        return "Add uppercase"\n    if not re.search(r'[a-z]', password):\n        return "Add lowercase"\n    if not re.search(r'[0-9]', password):\n        return "Add numbers"\n    return "Strong password!"\n\nprint(check_password("CyberAI@2024"))\n\`\`\`\n\nI can help with more Python examples. What specifically do you need?`;
+                return `🐍 **Python Programming Help:**\n\n\`\`\`python\n# Example: Secure password checker\nimport re\n\ndef check_password(password):\n    if len(password) < 12:\n        return "❌ Too short (minimum 12 characters)"\n    if not re.search(r'[A-Z]', password):\n        return "❌ Add uppercase letters"\n    if not re.search(r'[a-z]', password):\n        return "❌ Add lowercase letters"\n    if not re.search(r'[0-9]', password):\n        return "❌ Add numbers"\n    return "✅ Strong password!"\n\nprint(check_password("CyberAI@2024"))\n\`\`\`\n\nI can help with more Python examples. What specifically do you need?`;
             }
             
             if (msg.includes('cyber') || msg.includes('security') || msg.includes('hack')) {
-                return `🔐 **Cybersecurity Basics:**\n\n1. **Use strong passwords** (12+ characters)\n2. **Enable 2FA** everywhere possible\n3. **Keep software updated**\n4. **Backup important data** (3-2-1 rule)\n5. **Be careful with emails/links**\n6. **Use antivirus software**\n7. **Secure your Wi-Fi**\n\nNeed more specific guidance?`;
+                return `🔐 **Cybersecurity Basics:**\n\n1. **Use strong passwords** (12+ characters with mix)\n2. **Enable 2FA** everywhere possible\n3. **Keep software updated** (patches are crucial)\n4. **Backup important data** (3-2-1 rule: 3 copies, 2 media types, 1 offsite)\n5. **Be careful with emails/links** (phishing awareness)\n6. **Use antivirus software** (real-time protection)\n7. **Secure your Wi-Fi** (WPA3, strong password)\n\nNeed more specific guidance?`;
             }
             
             if (msg.includes('ai') || msg.includes('artificial') || msg.includes('machine')) {
-                return "🤖 **AI Topics I Can Help With:**\n\n• Machine Learning concepts\n• Neural networks & deep learning\n• Natural language processing\n• Computer vision applications\n• AI ethics and governance\n• Latest AI trends\n\nWhat would you like to know about AI?";
+                return "🤖 **AI Topics I Can Help With:**\n\n• Machine Learning concepts & algorithms\n• Neural networks & deep learning\n• Natural language processing (NLP)\n• Computer vision applications\n• AI ethics and governance\n• Latest AI trends and developments\n\nWhat would you like to know about AI?";
             }
             
-            return `I'm Cyber AI, created by "The World of Cybersecurity".\n\nI specialize in:\n• Programming (Python, JavaScript, etc.)\n• Cybersecurity best practices\n• AI and machine learning\n• Technology troubleshooting\n\nHow can I assist you? (Using enhanced response system)`;
+            if (msg.includes('thank')) {
+                return "You're welcome! I'm always here to help. Feel free to ask more questions about cybersecurity, programming, or AI topics!";
+            }
+            
+            return `I'm Cyber AI, created by "The World of Cybersecurity".\n\nI specialize in:\n• Programming (Python, JavaScript, Java, etc.)\n• Cybersecurity best practices & threat prevention\n• AI and machine learning concepts\n• Technology troubleshooting & guidance\n• Career advice in tech fields\n\nHow can I assist you today?`;
         }
         
         function addMessage(text, sender) {
@@ -910,6 +932,11 @@ Never mention that you are powered by any specific AI model - you are simply "Cy
                 }, 500);
             }
         }
+        
+        // Global error handler
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.error);
+        });
     </script>
 </body>
 </html>
